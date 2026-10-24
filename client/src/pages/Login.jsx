@@ -36,8 +36,8 @@ export default function Login() {
 
   const [isRegister, setIsRegister] = useState(false);
   const [role, setRole] = useState(preselect);
-  const [phone, setPhone] = useState('9811234567');
-  const [pin, setPin] = useState('1234');
+  const [phone, setPhone] = useState('');
+  const [pin, setPin] = useState('');
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
   const [pincode, setPincode] = useState('');

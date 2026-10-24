@@ -3,7 +3,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 class ApiService {
   async request(endpoint, options = {}) {
     const token = localStorage.getItem('sevasaathi_token');
-    
+
     const config = {
       ...options,
       headers: {
@@ -15,6 +15,13 @@ class ApiService {
 
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+
+      // Check if response is HTML (error page) instead of JSON
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/html')) {
+        throw new Error('API endpoint not found. Please check your backend URL configuration.');
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -24,7 +31,10 @@ class ApiService {
       return data;
     } catch (error) {
       console.error('API Error:', error);
-      throw error;
+      if (error.message.includes('API endpoint not found')) {
+        throw error;
+      }
+      throw new Error('Failed to connect to server. Please try again.');
     }
   }
 
