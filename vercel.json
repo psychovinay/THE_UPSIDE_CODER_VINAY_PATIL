@@ -5,7 +5,7 @@
       "destination": "https://the-upside-coder-vinay-patil.onrender.com/api/:path*"
     },
     {
-      "source": "/((?!api).)*",
+      "source": "/:path*",
       "destination": "/index.html"
     }
   ]
