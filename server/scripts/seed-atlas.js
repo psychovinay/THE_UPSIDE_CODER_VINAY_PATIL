@@ -47,9 +47,9 @@ const seedData = async () => {
       { id: 5, name: 'Carpenter', icon: '🪚', color: 'bg-green-50 text-green-600', description: 'Furniture repair, doors, cabinets', basePrice: 450, category: 'Home Repair' },
       { id: 6, name: 'Painter', icon: '🎨', color: 'bg-purple-50 text-purple-600', description: 'Interior painting, waterproofing', basePrice: 500, category: 'Home Repair' },
       { id: 7, name: 'AC Repair', icon: '❄️', color: 'bg-cyan-50 text-cyan-600', description: 'AC service, gas refill, installation', basePrice: 600, category: 'Appliances' },
-      { id: 8, name: 'Driver', icon: '🚗', color: 'bg-indigo-50 text-indigo-600', description: 'City driving, airport drops', basePrice: 750, category: 'Transport' },
-      { id: 9, name: 'Water Purifier', icon: '💧', color: 'bg-sky-50 text-sky-600', description: 'RO service, filter change', basePrice: 350, category: 'Appliances' },
-      { id: 10, name: 'Pest Control', icon: '🐜', color: 'bg-lime-50 text-lime-600', description: 'Termite, cockroach, bed bug control', basePrice: 800, category: 'Home Repair' }
+      { id: 8, name: 'Pest Control', icon: '�', color: 'bg-red-50 text-red-600', description: 'Cockroach, termite, rats, bedbugs', basePrice: 800, category: 'Household' },
+      { id: 9, name: 'Driver', icon: '�', color: 'bg-slate-50 text-slate-600', description: 'Full day, part time, outstation', basePrice: 700, category: 'Transport' },
+      { id: 10, name: 'Security Guard', icon: '�', color: 'bg-indigo-50 text-indigo-600', description: 'Society, shop, event security', basePrice: 900, category: 'Security' }
     ]);
 
     console.log('Created services');
