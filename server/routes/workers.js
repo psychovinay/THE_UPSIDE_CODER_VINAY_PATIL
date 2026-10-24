@@ -17,9 +17,13 @@ router.get('/', async (req, res) => {
       .populate('serviceId')
       .select('-pin');
 
-    // Filter by serviceId (match by service id field)
+    // Filter by serviceId (match by ObjectId or virtual id)
     if (serviceId) {
-      workers = workers.filter(w => w.serviceId && w.serviceId.id == serviceId);
+      workers = workers.filter(w => {
+        if (!w.serviceId) return false;
+        const sid = w.serviceId._id ? w.serviceId._id.toString() : w.serviceId.toString();
+        return sid === serviceId.toString() || (w.serviceId.id && w.serviceId.id.toString() === serviceId.toString());
+      });
     }
 
     // Filter by pincode/radius (simplified - in production use geospatial queries)

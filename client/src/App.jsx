@@ -71,6 +71,7 @@ export default function App() {
 
       {/* Worker */}
       <Route path="/worker"              element={<Protected role="worker"><WorkerDashboard /></Protected>} />
+      <Route path="/worker/dashboard"    element={<Navigate to="/worker" replace />} />
       <Route path="/worker/jobs"         element={<Protected role="worker"><JobOffers /></Protected>} />
       <Route path="/worker/notifications" element={<Protected role="worker"><JobNotifications /></Protected>} />
       <Route path="/worker/arrival-otp"  element={<Protected role="worker"><ArrivalOTP /></Protected>} />

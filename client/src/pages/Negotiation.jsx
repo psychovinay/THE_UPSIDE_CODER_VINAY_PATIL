@@ -91,7 +91,7 @@ export default function Negotiation() {
     try {
       await api.acceptOffer(id, negotiationId);
       toast.success('Offer accepted! Job confirmed.');
-      navigate('/worker/dashboard');
+      navigate('/worker');
     } catch (error) {
       console.error('Failed to accept offer:', error);
       toast.error('Failed to accept offer');

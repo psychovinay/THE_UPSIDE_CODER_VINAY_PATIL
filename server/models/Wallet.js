@@ -14,4 +14,6 @@ const walletTransactionSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model('WalletTransaction', walletTransactionSchema);
+const WalletTransaction = mongoose.model('WalletTransaction', walletTransactionSchema);
+WalletTransaction.WalletTransaction = WalletTransaction;
+module.exports = WalletTransaction;
