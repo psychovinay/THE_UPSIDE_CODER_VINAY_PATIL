@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://YOUR_BACKEND_URL.onrender.com/api/:path*"
+      "destination": "https://the-upside-coder-vinay-patil.onrender.com/api/:path*"
     }
   ]
 }
