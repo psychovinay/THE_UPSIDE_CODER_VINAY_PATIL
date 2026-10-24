@@ -11,12 +11,16 @@ router.get('/', async (req, res) => {
     const { serviceId, pincode, radius, available } = req.query;
     const filter = {};
 
-    if (serviceId) filter.serviceId = serviceId;
     if (available !== undefined) filter.available = available === 'true';
 
     let workers = await Worker.find(filter)
       .populate('serviceId')
       .select('-pin');
+
+    // Filter by serviceId (match by service id field)
+    if (serviceId) {
+      workers = workers.filter(w => w.serviceId && w.serviceId.id == serviceId);
+    }
 
     // Filter by pincode/radius (simplified - in production use geospatial queries)
     if (pincode) {
