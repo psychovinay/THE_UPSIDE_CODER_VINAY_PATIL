@@ -88,19 +88,29 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const data = await api.login(account.phone, account.pin, account.role);
-      
+
       if (data.success && data.user) {
         setUser(data.user);
         setLoading(false);
         return data.user;
       }
-      
+
       setLoading(false);
       return null;
     } catch (error) {
+      // Fallback to offline demo mode if API fails
+      console.warn('API login failed, using offline demo mode:', error.message);
+      const demoUser = {
+        _id: account.id,
+        name: account.name,
+        phone: account.phone,
+        role: account.role,
+        initials: account.name.split(' ').map(n => n[0]).join('').toUpperCase(),
+        avatarColor: account.role === 'customer' ? 'bg-rose-500' : account.role === 'worker' ? 'bg-blue-500' : 'bg-slate-600'
+      };
+      setUser(demoUser);
       setLoading(false);
-      console.error('Demo login error:', error);
-      return null;
+      return demoUser;
     }
   };
 
