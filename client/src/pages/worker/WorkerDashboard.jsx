@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Briefcase,
@@ -12,10 +12,11 @@ import {
   ShieldCheck,
   Bell,
   PhoneCall,
+  Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
-import { BOOKINGS, WORKERS } from '../../data/mockData';
+import { api } from '../../services/api';
 import StarRating from '../../components/StarRating';
 import Navbar from '../../components/Navbar';
 import BottomNav from '../../components/BottomNav';
@@ -24,27 +25,63 @@ export default function WorkerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const worker = WORKERS.find((w) => w.id === user?.id) || WORKERS[0];
-  const [isAvailable, setIsAvailable] = useState(worker.available);
+  const [worker, setWorker] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchWorkerData = async () => {
+      if (!user?._id) return;
+      try {
+        setLoading(true);
+        const [workerData, bookingsData] = await Promise.all([
+          api.getWorker(user._id),
+          api.getWorkerBookings(user._id)
+        ]);
+        setWorker(workerData);
+        setIsAvailable(workerData?.available || true);
+        setBookings(bookingsData || []);
+      } catch (error) {
+        console.error('Failed to fetch worker data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWorkerData();
+  }, [user?._id]);
 
   // Active jobs for this worker
-  const activeJobs = BOOKINGS.filter(
-    (b) => b.workerId === worker.id && ['accepted', 'en_route'].includes(b.status)
+  const activeJobs = bookings.filter(
+    (b) => ['accepted', 'en_route'].includes(b.status)
   );
 
-  const pendingOffersCount = BOOKINGS.filter(
-    (b) => b.workerId === worker.id && b.status === 'pending'
-  ).length || 2;
+  const pendingOffersCount = bookings.filter(
+    (b) => b.status === 'pending'
+  ).length;
 
-  const handleToggleAvailability = () => {
-    const nextState = !isAvailable;
-    setIsAvailable(nextState);
-    if (nextState) {
-      toast.success('You are now ONLINE & receiving job alerts! 🟢');
-    } else {
-      toast('You are now OFFLINE. Enjoy your rest! 🔴');
+  const handleToggleAvailability = async () => {
+    try {
+      const nextState = !isAvailable;
+      await api.toggleWorkerAvailability(user._id);
+      setIsAvailable(nextState);
+      if (nextState) {
+        toast.success('You are now ONLINE & receiving job alerts! 🟢');
+      } else {
+        toast('You are now OFFLINE. Enjoy your rest! 🔴');
+      }
+    } catch (error) {
+      toast.error('Failed to update availability');
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col pb-24 md:pb-8">
@@ -56,21 +93,21 @@ export default function WorkerDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3.5">
               <div
-                className={`w-14 h-14 rounded-full ${worker.avatarColor} text-white font-bold text-xl flex items-center justify-center border-2 border-teal-400`}
+                className={`w-14 h-14 rounded-full ${worker?.avatarColor || 'bg-teal-600'} text-white font-bold text-xl flex items-center justify-center border-2 border-teal-400`}
               >
-                {worker.initials || 'RK'}
+                {worker?.initials || 'WK'}
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h2 className="text-lg font-bold">{worker.name}</h2>
-                  {worker.aadhaarVerified && (
+                  <h2 className="text-lg font-bold">{worker?.name || 'Worker'}</h2>
+                  {worker?.aadhaarVerified && (
                     <ShieldCheck className="w-4 h-4 text-teal-400" />
                   )}
                 </div>
-                <p className="text-xs text-teal-300">{worker.skills[0]} • {worker.city}</p>
+                <p className="text-xs text-teal-300">{worker?.skills?.[0] || 'Service'} • {worker?.city || 'Location'}</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <StarRating rating={worker.rating} size="sm" readonly />
-                  <span className="text-xs text-slate-300 ml-1">({worker.reviewCount})</span>
+                  <StarRating rating={worker?.rating || 0} size="sm" readonly />
+                  <span className="text-xs text-slate-300 ml-1">({worker?.reviewCount || 0})</span>
                 </div>
               </div>
             </div>
@@ -146,11 +183,11 @@ export default function WorkerDashboard() {
             </div>
           ) : (
             activeJobs.map((job) => (
-              <div key={job.id} className="card p-4 sm:p-5 border-l-4 border-l-teal-600 space-y-3">
+              <div key={job._id || job.id} className="card p-4 sm:p-5 border-l-4 border-l-teal-600 space-y-3">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="badge badge-teal text-[11px] mb-1">{job.service}</span>
-                    <h4 className="font-bold text-slate-800 text-base">{job.customerName}</h4>
+                    <span className="badge badge-teal text-[11px] mb-1">{job.serviceId?.name || 'Service'}</span>
+                    <h4 className="font-bold text-slate-800 text-base">{job.customerId?.name || 'Customer'}</h4>
                   </div>
                   <span className="font-bold text-teal-700 text-sm">₹{job.budget}</span>
                 </div>
@@ -168,13 +205,13 @@ export default function WorkerDashboard() {
 
                 <div className="flex gap-2 pt-2 border-t border-slate-100">
                   <button
-                    onClick={() => navigate('/worker/arrival-otp')}
+                    onClick={() => navigate(`/worker/arrival-otp/${job._id || job.id}`)}
                     className="flex-1 btn-primary py-2 text-xs flex items-center justify-center gap-1"
                   >
                     Enter Arrival OTP
                   </button>
                   <button
-                    onClick={() => navigate('/worker/complete-otp')}
+                    onClick={() => navigate(`/worker/complete-otp/${job._id || job.id}`)}
                     className="flex-1 btn-secondary py-2 text-xs flex items-center justify-center gap-1"
                   >
                     Complete Job

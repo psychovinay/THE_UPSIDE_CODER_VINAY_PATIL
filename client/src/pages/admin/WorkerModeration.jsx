@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -9,38 +9,74 @@ import {
   UserCheck,
   Ban,
   RotateCcw,
+  Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { WORKERS } from '../../data/mockData';
+import { api } from '../../services/api';
 import Navbar from '../../components/Navbar';
 import BottomNav from '../../components/BottomNav';
 
 export default function WorkerModeration() {
-  const [workersList, setWorkersList] = useState(
-    WORKERS.map((w) => ({
-      ...w,
-      status: w.verified ? 'approved' : 'pending',
-    }))
-  );
-
+  const [workersList, setWorkersList] = useState([]);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const handleAction = (workerId, newStatus, message) => {
-    setWorkersList((prev) =>
-      prev.map((w) => (w.id === workerId ? { ...w, status: newStatus, verified: newStatus === 'approved' } : w))
-    );
-    toast.success(message);
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      try {
+        setLoading(true);
+        const data = await api.getAdminWorkers();
+        setWorkersList(data || []);
+      } catch (error) {
+        console.error('Failed to fetch workers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWorkers();
+  }, []);
+
+  const handleAction = async (workerId, action, message) => {
+    try {
+      if (action === 'approve') {
+        await api.approveWorker(workerId);
+      } else if (action === 'suspend') {
+        await api.suspendWorker(workerId);
+      }
+      
+      setWorkersList((prev) =>
+        prev.map((w) => {
+          if (w._id === workerId || w.id === workerId) {
+            if (action === 'approve') return { ...w, status: 'approved', aadhaarVerified: true };
+            if (action === 'suspend') return { ...w, status: 'suspended' };
+            if (action === 'reinstate') return { ...w, status: 'approved' };
+          }
+          return w;
+        })
+      );
+      toast.success(message);
+    } catch (error) {
+      toast.error('Failed to update worker status');
+    }
   };
 
   const filtered = workersList.filter((w) => {
     const matchesFilter = filter === 'all' || w.status === filter;
     const matchesSearch =
       w.name.toLowerCase().includes(search.toLowerCase()) ||
-      w.skills.some((s) => s.toLowerCase().includes(search.toLowerCase())) ||
+      (w.skills || []).some((s) => s.toLowerCase().includes(search.toLowerCase())) ||
       w.city.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col pb-24 md:pb-8">
@@ -88,12 +124,12 @@ export default function WorkerModeration() {
         <div className="space-y-3">
           {filtered.map((worker) => (
             <div
-              key={worker.id}
+              key={worker._id || worker.id}
               className="card p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div className="flex items-center gap-3.5">
                 <div
-                  className={`w-12 h-12 rounded-full ${worker.avatarColor} text-white font-bold text-base flex items-center justify-center flex-shrink-0`}
+                  className={`w-12 h-12 rounded-full ${worker.avatarColor || 'bg-teal-600'} text-white font-bold text-base flex items-center justify-center flex-shrink-0`}
                 >
                   {worker.initials || 'W'}
                 </div>
@@ -102,21 +138,19 @@ export default function WorkerModeration() {
                     <h3 className="font-bold text-slate-800 text-sm">{worker.name}</h3>
                     <span
                       className={`badge text-[10px] ${
-                        worker.status === 'approved'
+                        worker.aadhaarVerified
                           ? 'badge-green'
-                          : worker.status === 'pending'
-                          ? 'badge-amber'
-                          : 'badge-red'
+                          : 'badge-amber'
                       }`}
                     >
-                      {worker.status.toUpperCase()}
+                      {worker.aadhaarVerified ? 'VERIFIED' : 'PENDING'}
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {worker.skills.slice(0, 2).join(', ')} • {worker.city} • PIN {worker.pincode}
+                    {(worker.skills || []).slice(0, 2).join(', ')} • {worker.city} • PIN {worker.pincode}
                   </p>
                   <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
-                    <span>Exp: {worker.experience}</span>
+                    <span>Exp: {worker.experience || 'N/A'}</span>
                     <span>•</span>
                     <span className="flex items-center gap-0.5 text-teal-700 font-medium">
                       <ShieldCheck className="w-3 h-3" />
@@ -128,16 +162,16 @@ export default function WorkerModeration() {
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2 self-end sm:self-center">
-                {worker.status === 'pending' && (
+                {!worker.aadhaarVerified && (
                   <>
                     <button
-                      onClick={() => handleAction(worker.id, 'approved', `${worker.name} Approved & Activated!`)}
+                      onClick={() => handleAction(worker._id || worker.id, 'approve', `${worker.name} Approved & Activated!`)}
                       className="btn-primary py-2 px-3 text-xs flex items-center gap-1 bg-green-600 hover:bg-green-700"
                     >
                       <Check className="w-3.5 h-3.5" /> Approve
                     </button>
                     <button
-                      onClick={() => handleAction(worker.id, 'suspended', `${worker.name} Application Rejected`)}
+                      onClick={() => handleAction(worker._id || worker.id, 'suspend', `${worker.name} Application Rejected`)}
                       className="btn-ghost text-red-600 hover:bg-red-50 py-2 px-3 text-xs flex items-center gap-1 border border-red-200"
                     >
                       <X className="w-3.5 h-3.5" /> Reject
@@ -145,21 +179,12 @@ export default function WorkerModeration() {
                   </>
                 )}
 
-                {worker.status === 'approved' && (
+                {worker.aadhaarVerified && (
                   <button
-                    onClick={() => handleAction(worker.id, 'suspended', `${worker.name} Temporarily Suspended`)}
+                    onClick={() => handleAction(worker._id || worker.id, 'suspend', `${worker.name} Temporarily Suspended`)}
                     className="btn-ghost text-amber-700 hover:bg-amber-50 py-2 px-3 text-xs flex items-center gap-1 border border-amber-200"
                   >
                     <Ban className="w-3.5 h-3.5" /> Suspend
-                  </button>
-                )}
-
-                {worker.status === 'suspended' && (
-                  <button
-                    onClick={() => handleAction(worker.id, 'approved', `${worker.name} Reinstated!`)}
-                    className="btn-primary py-2 px-3 text-xs flex items-center gap-1"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" /> Reinstate
                   </button>
                 )}
               </div>

@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, MapPin, SlidersHorizontal, ChevronRight, AlertCircle } from 'lucide-react';
 import BottomNav from '../../components/BottomNav';
 import ServiceCard from '../../components/ServiceCard';
-import { SERVICES } from '../../data/mockData';
+import { api } from '../../services/api';
 import { useBooking } from '../../context/BookingContext';
 
 const RADIUS_OPTIONS = [5, 10, 15];
@@ -23,15 +23,32 @@ export default function ServiceSearch() {
   const [budget, setBudget] = useState(1500);
   const [selectedCategory, setSelectedCategory] = useState(preselectedService);
   const [pincodeError, setPincodeError] = useState('');
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const categories = useMemo(() => SERVICES || [], []);
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const data = await api.getServices();
+        setServices(data);
+      } catch (error) {
+        console.error('Failed to fetch services:', error);
+        setServices([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchServices();
+  }, []);
+
+  const categories = useMemo(() => services || [], [services]);
 
   const filteredServices = useMemo(() => {
     return categories.filter((s) => {
       const matchesQuery = query.trim() === '' ||
         s.name.toLowerCase().includes(query.toLowerCase()) ||
         (s.description || '').toLowerCase().includes(query.toLowerCase());
-      const matchesCategory = !selectedCategory || s.id === selectedCategory;
+      const matchesCategory = !selectedCategory || s._id === selectedCategory || s.id === selectedCategory;
       return matchesQuery && matchesCategory;
     });
   }, [query, selectedCategory, categories]);

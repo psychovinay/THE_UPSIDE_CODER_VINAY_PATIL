@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, Clock, MapPin, ChevronRight, Plus } from 'lucide-react';
-import { BOOKINGS } from '../../data/mockData';
+import { Calendar, Clock, MapPin, ChevronRight, Plus, Loader2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/api';
 import BookingStatusBadge from '../../components/BookingStatusBadge';
 import EmptyState from '../../components/EmptyState';
 import Navbar from '../../components/Navbar';
@@ -9,9 +10,29 @@ import BottomNav from '../../components/BottomNav';
 
 export default function MyBookings() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [filter, setFilter] = useState('all');
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredBookings = BOOKINGS.filter((booking) => {
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!user?._id) return;
+      try {
+        setLoading(true);
+        const data = await api.getCustomerBookings(user._id);
+        setBookings(data || []);
+      } catch (error) {
+        console.error('Failed to fetch bookings:', error);
+        setBookings([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBookings();
+  }, [user?._id]);
+
+  const filteredBookings = bookings.filter((booking) => {
     if (filter === 'all') return true;
     if (filter === 'active') return ['pending', 'accepted', 'en_route', 'arrived'].includes(booking.status);
     if (filter === 'completed') return booking.status === 'completed';
@@ -60,7 +81,11 @@ export default function MyBookings() {
         </div>
 
         {/* Bookings List */}
-        {filteredBookings.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+          </div>
+        ) : filteredBookings.length === 0 ? (
           <EmptyState
             icon="📅"
             title="No bookings found"
@@ -72,17 +97,17 @@ export default function MyBookings() {
           <div className="space-y-3">
             {filteredBookings.map((b) => (
               <div
-                key={b.id}
-                onClick={() => navigate(`/customer/track/${b.id}`)}
+                key={b._id || b.id}
+                onClick={() => navigate(`/customer/track/${b._id || b.id}`)}
                 className="card card-hover p-4 sm:p-5 flex flex-col gap-3"
               >
                 <div className="flex items-start justify-between">
                   <div>
                     <span className="text-xs font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md">
-                      {b.service}
+                      {b.serviceId?.name || 'Service'}
                     </span>
                     <h3 className="font-bold text-slate-800 text-base mt-1">
-                      {b.workerName}
+                      {b.workerId?.name || 'Worker'}
                     </h3>
                   </div>
                   <BookingStatusBadge status={b.status} />
@@ -91,7 +116,7 @@ export default function MyBookings() {
                 <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 py-1">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{b.date}</span>
+                    <span>{new Date(b.date).toLocaleDateString()}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-slate-400" />

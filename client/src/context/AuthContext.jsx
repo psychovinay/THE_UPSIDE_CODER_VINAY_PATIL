@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { CUSTOMERS, WORKERS } from '../data/mockData';
+import { api } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -36,71 +36,76 @@ export function AuthProvider({ children }) {
 
   const login = async (phone, pin, role) => {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 400)); // short realistic delay
-
-    const cleanPhone = String(phone).replace(/\D/g, '');
-
-    // 1. Check exact match in DEMO_ACCOUNTS
-    let account = DEMO_ACCOUNTS.find(
-      (a) => a.phone === cleanPhone && a.role === role
-    );
-
-    // 2. If not found by phone, check if any demo account matches this role
-    if (!account) {
-      if (role === 'admin') {
-        account = DEMO_ACCOUNTS.find((a) => a.role === 'admin');
-      } else if (role === 'worker') {
-        account = {
-          role: 'worker',
-          id: 'w1',
-          name: 'Ramesh Kumar',
-          phone: cleanPhone || '9876543210',
-          pin: pin || '1234',
-        };
-      } else {
-        account = {
-          role: 'customer',
-          id: 'c1',
-          name: 'Priya Sharma',
-          phone: cleanPhone || '9811234567',
-          pin: pin || '1234',
-        };
+    try {
+      const cleanPhone = String(phone).replace(/\D/g, '');
+      const data = await api.login(cleanPhone, pin, role);
+      
+      if (data.success && data.user) {
+        setUser(data.user);
+        setLoading(false);
+        return { success: true, user: data.user };
       }
+      
+      setLoading(false);
+      return { success: false, error: 'Login failed' };
+    } catch (error) {
+      setLoading(false);
+      return { success: false, error: error.message };
     }
-
-    const profileData =
-      role === 'customer'
-        ? CUSTOMERS.find((c) => c.id === account.id) || CUSTOMERS[0]
-        : role === 'worker'
-        ? WORKERS.find((w) => w.id === account.id) || WORKERS[0]
-        : { id: 'a1', name: 'Admin User', initials: 'AU', avatarColor: 'bg-slate-600', role: 'admin' };
-
-    const fullUser = { ...account, ...profileData, role };
-    setUser(fullUser);
-    setLoading(false);
-    return { success: true, user: fullUser };
   };
 
-  const logout = () => {
+  const register = async (userData) => {
+    setLoading(true);
+    try {
+      const cleanPhone = String(userData.phone).replace(/\D/g, '');
+      const data = await api.register({ ...userData, phone: cleanPhone });
+      
+      if (data.success && data.user) {
+        setUser(data.user);
+        setLoading(false);
+        return { success: true, user: data.user };
+      }
+      
+      setLoading(false);
+      return { success: false, error: 'Registration failed' };
+    } catch (error) {
+      setLoading(false);
+      return { success: false, error: error.message };
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await api.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
     setUser(null);
     localStorage.removeItem('sevasaathi_user');
   };
 
-  const demoLogin = (account) => {
-    const profileData =
-      account.role === 'customer'
-        ? CUSTOMERS.find((c) => c.id === account.id) || CUSTOMERS[0]
-        : account.role === 'worker'
-        ? WORKERS.find((w) => w.id === account.id) || WORKERS[0]
-        : { id: 'a1', name: 'Admin User', initials: 'AU', avatarColor: 'bg-slate-600', role: 'admin' };
-
-    const fullUser = { ...account, ...profileData };
-    setUser(fullUser);
-    return fullUser;
+  const demoLogin = async (account) => {
+    setLoading(true);
+    try {
+      const data = await api.login(account.phone, account.pin, account.role);
+      
+      if (data.success && data.user) {
+        setUser(data.user);
+        setLoading(false);
+        return data.user;
+      }
+      
+      setLoading(false);
+      return null;
+    } catch (error) {
+      setLoading(false);
+      console.error('Demo login error:', error);
+      return null;
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, demoLogin }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, demoLogin, register }}>
       {children}
     </AuthContext.Provider>
   );

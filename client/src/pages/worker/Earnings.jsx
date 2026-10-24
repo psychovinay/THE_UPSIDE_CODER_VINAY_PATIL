@@ -1,35 +1,63 @@
-import React, { useState } from 'react';
-import { Wallet, ArrowUpRight, ArrowDownLeft, Download, CheckCircle, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Wallet, ArrowUpRight, ArrowDownLeft, Download, CheckCircle, Clock, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/api';
 import Navbar from '../../components/Navbar';
 import BottomNav from '../../components/BottomNav';
 
 export default function Earnings() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('week');
   const [withdrawing, setWithdrawing] = useState(false);
-  const [balance, setBalance] = useState(4850);
+  const [balance, setBalance] = useState(0);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const transactions = [
-    { id: 't1', service: 'Electrician - Inverter Repair', customer: 'Priya S.', date: 'Today, 2:30 PM', amount: 550, status: 'Completed' },
-    { id: 't2', service: 'Electrician - Switchboard Fix', customer: 'Ajay M.', date: 'Yesterday', amount: 400, status: 'Completed' },
-    { id: 't3', service: 'Electrician - Ceiling Fan Wiring', customer: 'Rohan K.', date: '22 Oct', amount: 650, status: 'Completed' },
-    { id: 't4', service: 'Bank Withdrawal to UPI', customer: 'HDFC Bank ••3821', date: '21 Oct', amount: -2500, status: 'Withdrawn' },
-    { id: 't5', service: 'Electrician - Geyser Connection', customer: 'Sanjay G.', date: '20 Oct', amount: 750, status: 'Completed' },
-    { id: 't6', service: 'Electrician - MCB Trip Fix', customer: 'Sunita R.', date: '19 Oct', amount: 500, status: 'Completed' },
-  ];
+  useEffect(() => {
+    const fetchWalletData = async () => {
+      if (!user?._id) return;
+      try {
+        setLoading(true);
+        const [balanceData, transactionsData] = await Promise.all([
+          api.getWalletBalance(),
+          api.getWalletTransactions()
+        ]);
+        setBalance(balanceData?.balance || 0);
+        setTransactions(transactionsData || []);
+      } catch (error) {
+        console.error('Failed to fetch wallet data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWalletData();
+  }, [user?._id]);
 
-  const handleWithdraw = () => {
+  const handleWithdraw = async () => {
     if (balance <= 0) {
       toast.error('No balance to withdraw');
       return;
     }
-    setWithdrawing(true);
-    setTimeout(() => {
-      setWithdrawing(false);
+    try {
+      setWithdrawing(true);
+      await api.withdrawFunds(balance);
       setBalance(0);
-      toast.success('₹4,850 transferred to UPI ID: 9876543210@upi 🚀');
-    }, 1200);
+      toast.success('Funds transferred to your bank account 🚀');
+    } catch (error) {
+      toast.error('Failed to withdraw funds');
+    } finally {
+      setWithdrawing(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col pb-24 md:pb-8">

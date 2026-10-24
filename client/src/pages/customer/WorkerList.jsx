@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, SlidersHorizontal, Star, Shield } from 'lucide-react';
 import BottomNav from '../../components/BottomNav';
 import WorkerCard from '../../components/WorkerCard';
-import { WORKERS, SERVICES } from '../../data/mockData';
+import { api } from '../../services/api';
+import { SERVICES } from '../../data/mockData';
 
 const SORT_OPTIONS = [
   { value: 'rating', label: 'Rating' },
@@ -39,19 +40,31 @@ export default function WorkerList() {
   const [sortBy, setSortBy] = useState('rating');
   const [aadhaarOnly, setAadhaarOnly] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [workers, setWorkers] = useState([]);
 
   const service = (SERVICES || []).find((s) => s.id === serviceId);
 
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 1200);
-    return () => clearTimeout(t);
-  }, []);
+    const fetchWorkers = async () => {
+      try {
+        setLoading(true);
+        const params = { serviceId, pincode, available: 'true' };
+        const data = await api.getWorkers(params);
+        setWorkers(data || []);
+      } catch (error) {
+        console.error('Failed to fetch workers:', error);
+        setWorkers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWorkers();
+  }, [serviceId, pincode]);
 
-  const workers = useMemo(() => {
-    let list = (WORKERS || []).filter((w) => {
-      const matchesService = !serviceId || (w.services || []).includes(serviceId);
+  const filteredWorkers = useMemo(() => {
+    let list = workers.filter((w) => {
       const matchesAadhaar = !aadhaarOnly || w.aadhaarVerified;
-      return matchesService && matchesAadhaar;
+      return matchesAadhaar;
     });
 
     if (sortBy === 'rating') list = [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0));
@@ -59,7 +72,7 @@ export default function WorkerList() {
     if (sortBy === 'distance') list = [...list].sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
 
     return list;
-  }, [serviceId, aadhaarOnly, sortBy]);
+  }, [workers, aadhaarOnly, sortBy]);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
@@ -74,7 +87,7 @@ export default function WorkerList() {
         <h1 className="text-lg font-bold flex-1">Available Workers</h1>
         {!loading && (
           <span className="badge bg-white/20 text-white text-xs font-bold px-2.5 py-1 rounded-full">
-            {workers.length}
+            {filteredWorkers.length}
           </span>
         )}
       </div>
@@ -128,7 +141,7 @@ export default function WorkerList() {
         <div className="space-y-4">
           {loading ? (
             [1, 2, 3].map((i) => <ShimmerCard key={i} />)
-          ) : workers.length === 0 ? (
+          ) : filteredWorkers.length === 0 ? (
             <div className="text-center py-20">
               <span className="text-5xl block mb-4">😔</span>
               <h3 className="text-lg font-bold text-slate-700 mb-2">No workers found</h3>
@@ -143,12 +156,12 @@ export default function WorkerList() {
               </button>
             </div>
           ) : (
-            workers.map((worker) => (
+            filteredWorkers.map((worker) => (
               <WorkerCard
-                key={worker.id}
+                key={worker._id || worker.id}
                 worker={worker}
                 showDistance
-                onClick={() => navigate(`/customer/worker/${worker.id}`)}
+                onClick={() => navigate(`/customer/workers/${worker._id || worker.id}`)}
               />
             ))
           )}

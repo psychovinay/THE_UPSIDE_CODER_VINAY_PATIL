@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -10,9 +10,10 @@ import {
   AlertTriangle,
   Send,
   Star,
+  Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { BOOKINGS, WORKERS, STATUS_CONFIG } from '../../data/mockData';
+import { api } from '../../services/api';
 import BookingStatusBadge from '../../components/BookingStatusBadge';
 import StarRating from '../../components/StarRating';
 import Navbar from '../../components/Navbar';
@@ -22,28 +23,29 @@ export default function BookingTrack() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Find booking or use fallback mock
-  const existingBooking = BOOKINGS.find((b) => b.id === id) || {
-    id: id || 'b_new',
-    customerId: 'c1',
-    customerName: 'Priya Sharma',
-    workerId: 'w1',
-    workerName: 'Ramesh Kumar',
-    service: 'Electrician',
-    status: 'en_route',
-    date: 'Today',
-    time: '2:30 PM',
-    address: '45, Rose Garden Society, Sector 14, Gurugram',
-    pincode: '122001',
-    budget: 550,
-    amount: null,
-    requestCode: '654321',
-    arrivalOTP: '4821',
-    completionOTP: '9034',
-  };
+  const [booking, setBooking] = useState(null);
+  const [worker, setWorker] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [booking, setBooking] = useState(existingBooking);
-  const worker = WORKERS.find((w) => w.id === booking.workerId) || WORKERS[0];
+  useEffect(() => {
+    const fetchBookingData = async () => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        const bookingData = await api.getBooking(id);
+        setBooking(bookingData);
+        if (bookingData?.workerId) {
+          const workerData = await api.getWorker(bookingData.workerId);
+          setWorker(workerData);
+        }
+      } catch (error) {
+        console.error('Failed to fetch booking:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBookingData();
+  }, [id]);
 
   // Review modal state
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -73,10 +75,15 @@ export default function BookingTrack() {
     return 'pending';
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (window.confirm('Are you sure you want to cancel this booking?')) {
-      setBooking((prev) => ({ ...prev, status: 'cancelled' }));
-      toast.error('Booking has been cancelled');
+      try {
+        await api.cancelBooking(booking._id || booking.id);
+        setBooking((prev) => ({ ...prev, status: 'cancelled' }));
+        toast.error('Booking has been cancelled');
+      } catch (error) {
+        toast.error('Failed to cancel booking');
+      }
     }
   };
 
@@ -90,16 +97,36 @@ export default function BookingTrack() {
     toast.success('Work finished! Please confirm with completion OTP');
   };
 
-  const handleSubmitReview = (e) => {
+  const handleSubmitReview = async (e) => {
     e.preventDefault();
-    setSubmittingReview(true);
-    setTimeout(() => {
+    try {
+      setSubmittingReview(true);
+      await api.addBookingReview(booking._id || booking.id, { rating, comment });
       setSubmittingReview(false);
       setShowReviewModal(false);
       setBooking((prev) => ({ ...prev, rating, review: comment }));
       toast.success('Thank you for rating your Saathi!');
-    }, 800);
+    } catch (error) {
+      setSubmittingReview(false);
+      toast.error('Failed to submit review');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!booking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-400">
+        Booking not found
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col pb-24 md:pb-8">
@@ -161,28 +188,28 @@ export default function BookingTrack() {
         <div className="card p-4 sm:p-5 flex items-center justify-between">
           <div className="flex items-center gap-3.5">
             <div
-              className={`w-14 h-14 rounded-full ${worker.avatarColor} text-white font-bold text-xl flex items-center justify-center shadow-sm`}
+              className={`w-14 h-14 rounded-full ${worker?.avatarColor || 'bg-teal-600'} text-white font-bold text-xl flex items-center justify-center shadow-sm`}
             >
-              {worker.initials || 'WK'}
+              {worker?.initials || 'WK'}
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="font-bold text-slate-800 text-base">{worker.name}</h3>
-                {worker.aadhaarVerified && (
+                <h3 className="font-bold text-slate-800 text-base">{worker?.name || 'Worker'}</h3>
+                {worker?.aadhaarVerified && (
                   <ShieldCheck className="w-4 h-4 text-teal-600 fill-teal-100" />
                 )}
               </div>
-              <p className="text-xs text-slate-500">{booking.service} Specialist</p>
+              <p className="text-xs text-slate-500">{booking.serviceId?.name || 'Service'} Specialist</p>
               <div className="flex items-center gap-2 mt-1">
-                <StarRating rating={worker.rating} size="sm" readonly />
-                <span className="text-xs text-slate-400">({worker.reviewCount})</span>
+                <StarRating rating={worker?.rating || 0} size="sm" readonly />
+                <span className="text-xs text-slate-400">({worker?.reviewCount || 0})</span>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
             <Link
-              to={`/customer/call/${worker.id}`}
+              to={`/customer/call/${worker?._id || worker?.id}`}
               className="btn-primary py-2 px-3 text-xs flex items-center gap-1.5 shadow-sm"
             >
               <Phone className="w-3.5 h-3.5" /> Call Worker
@@ -296,11 +323,11 @@ export default function BookingTrack() {
           <h4 className="font-bold text-slate-800 text-sm border-b pb-2">Order Information</h4>
           <div className="flex justify-between py-1 text-xs">
             <span className="text-slate-500">Booking ID</span>
-            <span className="font-mono font-medium text-slate-800">#{booking.id}</span>
+            <span className="font-mono font-medium text-slate-800">#{booking._id || booking.id}</span>
           </div>
           <div className="flex justify-between py-1 text-xs">
             <span className="text-slate-500">Service Scheduled</span>
-            <span className="font-medium text-slate-800">{booking.date} at {booking.time}</span>
+            <span className="font-medium text-slate-800">{new Date(booking.date).toLocaleDateString()} at {booking.time}</span>
           </div>
           <div className="flex justify-between py-1 text-xs">
             <span className="text-slate-500">Agreed Estimated Budget</span>

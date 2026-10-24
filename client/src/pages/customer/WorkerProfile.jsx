@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Star, Shield, CheckCircle, MapPin, Clock,
-  Phone, Briefcase, Languages, ChevronRight
+  Phone, Briefcase, Languages, ChevronRight, Loader2
 } from 'lucide-react';
 import BottomNav from '../../components/BottomNav';
-import { WORKERS } from '../../data/mockData';
+import TrustCard from '../../components/TrustCard';
+import { api } from '../../services/api';
 
 const TABS = ['About', 'Reviews', 'Pricing'];
 
@@ -31,8 +32,39 @@ export default function WorkerProfile() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState('About');
+  const [worker, setWorker] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [kaamScore, setKaamScore] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const worker = (WORKERS || []).find((w) => w.id === id) || (WORKERS || [])[0];
+  useEffect(() => {
+    const fetchWorkerData = async () => {
+      try {
+        setLoading(true);
+        const [workerData, reviewsData, kaamScoreData] = await Promise.all([
+          api.getWorker(id),
+          api.getWorkerReviews(id),
+          api.getKaamScore(id)
+        ]);
+        setWorker(workerData);
+        setReviews(reviewsData || []);
+        setKaamScore(kaamScoreData);
+      } catch (error) {
+        console.error('Failed to fetch worker:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWorkerData();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   if (!worker) {
     return (
@@ -41,12 +73,6 @@ export default function WorkerProfile() {
       </div>
     );
   }
-
-  const reviews = worker.reviews || [
-    { id: 'r1', name: 'Priya Sharma', rating: 5, comment: 'Excellent work, very professional and on time!', date: '12 Oct 2026' },
-    { id: 'r2', name: 'Ankit Gupta', rating: 4, comment: 'Good service, got the job done properly.', date: '5 Oct 2026' },
-    { id: 'r3', name: 'Meena Iyer', rating: 5, comment: 'Highly recommend. Cleaned up after the work too.', date: '28 Sep 2026' },
-  ];
 
   return (
     <div className="min-h-screen bg-slate-50 pb-36">
@@ -71,23 +97,18 @@ export default function WorkerProfile() {
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-bold text-slate-900 mb-1 truncate">{worker.name}</h2>
-              <p className="text-sm text-slate-500 mb-2">{(worker.services || []).join(', ')}</p>
+              <p className="text-sm text-slate-500 mb-2">{worker.serviceId?.name || 'Service Provider'}</p>
               <div className="flex flex-wrap gap-1.5 mb-3">
                 {worker.aadhaarVerified && (
                   <span className="badge-teal flex items-center gap-1 text-xs">
                     <Shield className="w-3 h-3" /> Aadhaar Verified
                   </span>
                 )}
-                {worker.platformVerified && (
-                  <span className="badge-green flex items-center gap-1 text-xs">
-                    <CheckCircle className="w-3 h-3" /> Platform Verified
-                  </span>
-                )}
               </div>
               {/* Rating */}
               <div className="flex items-center gap-2">
-                <StarRow rating={worker.rating || 4.5} />
-                <span className="text-sm font-bold text-slate-800">{worker.rating || 4.5}</span>
+                <StarRow rating={worker.rating || 0} />
+                <span className="text-sm font-bold text-slate-800">{worker.rating || 0}</span>
                 <span className="text-xs text-slate-400">
                   ({worker.reviewCount || reviews.length} reviews)
                 </span>
@@ -99,17 +120,22 @@ export default function WorkerProfile() {
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-slate-600">
               <Briefcase className="w-4 h-4 text-teal-600" />
-              <span>{worker.jobsCompleted || 142} jobs completed</span>
+              <span>{worker.completedJobs || 0} jobs completed</span>
             </div>
             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-              worker.isAvailable
+              worker.available
                 ? 'bg-green-100 text-green-700'
                 : 'bg-slate-100 text-slate-500'
             }`}>
-              {worker.isAvailable ? '🟢 Available' : '🔴 Busy'}
+              {worker.available ? '🟢 Available' : '🔴 Busy'}
             </span>
           </div>
         </div>
+
+        {/* KaamScore Trust Card */}
+        {kaamScore && (
+          <TrustCard kaamScore={kaamScore.score} breakdown={kaamScore.breakdown} />
+        )}
 
         {/* Tabs */}
         <div className="flex bg-white rounded-xl border border-slate-100 shadow-sm mb-4 p-1">
@@ -162,7 +188,7 @@ export default function WorkerProfile() {
                 <div>
                   <div className="text-xs text-slate-500 font-medium">Location</div>
                   <div className="text-sm text-slate-800">
-                    {worker.city || 'Mumbai'}, {worker.pincode || '400001'}
+                    {worker.city || 'N/A'}, {worker.pincode || 'N/A'}
                   </div>
                 </div>
               </div>
@@ -171,7 +197,7 @@ export default function WorkerProfile() {
                 <div>
                   <div className="text-xs text-slate-500 font-medium">Experience</div>
                   <div className="text-sm text-slate-800">
-                    {worker.experience || '5+ years'}
+                    {worker.experience || 'N/A'}
                   </div>
                 </div>
               </div>
@@ -181,9 +207,13 @@ export default function WorkerProfile() {
             <div>
               <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Skills</h4>
               <div className="flex flex-wrap gap-2">
-                {(worker.skills || ['Wiring', 'Switchboard', 'AC Repair', 'Fan Installation']).map((skill) => (
-                  <span key={skill} className="badge-teal text-xs">{skill}</span>
-                ))}
+                {(worker.skills || []).length > 0 ? (
+                  worker.skills.map((skill) => (
+                    <span key={skill} className="badge-teal text-xs">{skill}</span>
+                  ))
+                ) : (
+                  <span className="text-xs text-slate-400">No skills listed</span>
+                )}
               </div>
             </div>
           </div>
@@ -191,21 +221,27 @@ export default function WorkerProfile() {
 
         {activeTab === 'Reviews' && (
           <div className="space-y-3">
-            {reviews.map((r) => (
-              <div key={r.id} className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
-                      {r.name.split(' ').map((n) => n[0]).join('')}
-                    </div>
-                    <span className="text-sm font-semibold text-slate-800">{r.name}</span>
-                  </div>
-                  <span className="text-xs text-slate-400">{r.date}</span>
-                </div>
-                <StarRow rating={r.rating} />
-                <p className="text-sm text-slate-600 mt-2 leading-relaxed">{r.comment}</p>
+            {reviews.length === 0 ? (
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 text-center text-slate-400 text-sm">
+                No reviews yet
               </div>
-            ))}
+            ) : (
+              reviews.map((r) => (
+                <div key={r._id || r.id} className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                        {r.customerId?.name?.split(' ').map((n) => n[0]).join('') || 'U'}
+                      </div>
+                      <span className="text-sm font-semibold text-slate-800">{r.customerId?.name || 'User'}</span>
+                    </div>
+                    <span className="text-xs text-slate-400">{new Date(r.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <StarRow rating={r.rating} />
+                  <p className="text-sm text-slate-600 mt-2 leading-relaxed">{r.comment}</p>
+                </div>
+              ))
+            )}
           </div>
         )}
 

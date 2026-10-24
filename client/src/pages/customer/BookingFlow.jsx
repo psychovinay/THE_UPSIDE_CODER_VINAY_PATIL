@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, Loader2, AlertTriangle, CheckCircle, Calendar, Clock
@@ -6,7 +6,8 @@ import {
 import toast from 'react-hot-toast';
 import BottomNav from '../../components/BottomNav';
 import StepIndicator from '../../components/StepIndicator';
-import { WORKERS, SERVICES } from '../../data/mockData';
+import { api } from '../../services/api';
+import { SERVICES } from '../../data/mockData';
 
 const TIME_SLOTS = [
   '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
@@ -20,10 +21,6 @@ function getInitials(name = '') {
   return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
-function genCode() {
-  return Math.random().toString(36).toUpperCase().slice(2, 8);
-}
-
 const todayStr = () => {
   const d = new Date();
   return d.toISOString().split('T')[0];
@@ -33,12 +30,30 @@ export default function BookingFlow() {
   const navigate = useNavigate();
   const { id: workerId } = useParams();
 
-  const worker = (WORKERS || []).find((w) => w.id === workerId) || (WORKERS || [])[0];
-  const service = (SERVICES || []).find((s) => (worker?.services || []).includes(s.id)) || (SERVICES || [])[0];
+  const [worker, setWorker] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [fetchingWorker, setFetchingWorker] = useState(true);
+
+  useEffect(() => {
+    const fetchWorker = async () => {
+      try {
+        setFetchingWorker(true);
+        const data = await api.getWorker(workerId);
+        setWorker(data);
+      } catch (error) {
+        console.error('Failed to fetch worker:', error);
+        toast.error('Failed to load worker details');
+      } finally {
+        setFetchingWorker(false);
+      }
+    };
+    fetchWorker();
+  }, [workerId]);
+
+  const service = worker?.serviceId || (SERVICES || [])[0];
 
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
   const [code] = useState(genCode());
 
   // Step 2
@@ -81,15 +96,39 @@ export default function BookingFlow() {
 
   const confirm = async () => {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1800));
-    setLoading(false);
-    toast.success(`Booking confirmed! Code: ${code}`, { duration: 4000 });
-    navigate('/customer/track/b_new');
+    try {
+      const bookingData = {
+        workerId: worker._id,
+        serviceId: service._id || service.id,
+        date,
+        time: timeSlot,
+        address: `${address}${landmark ? `, ${landmark}` : ''}`,
+        pincode,
+        budget,
+        notes,
+      };
+      
+      const booking = await api.createBooking(bookingData);
+      toast.success(`Booking confirmed! Code: ${booking.requestCode}`, { duration: 4000 });
+      navigate(`/customer/track/${booking._id}`);
+    } catch (error) {
+      toast.error(error.message || 'Failed to create booking');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const budgetPercent = ((budget - BUDGET_MIN) / (BUDGET_MAX - BUDGET_MIN)) * 100;
   const workerRate = worker?.hourlyRate || 350;
   const budgetWarn = budget < workerRate;
+
+  if (fetchingWorker) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">

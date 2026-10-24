@@ -13,21 +13,23 @@ import {
   LayoutDashboard,
   Users,
   AlertTriangle,
+  Sparkles,
+  Bell,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const CUSTOMER_ITEMS = [
   { label: 'Home', icon: House, to: '/customer' },
   { label: 'Search', icon: Search, to: '/customer/search' },
+  { label: 'Post Job', icon: Sparkles, to: '/customer/post-job' },
   { label: 'Bookings', icon: ClipboardList, to: '/customer/bookings' },
-  { label: 'Call', icon: Phone, to: '/customer/call/w1' },
   { label: 'Profile', icon: User, to: '/customer/profile' },
 ];
 
 const WORKER_ITEMS = [
   { label: 'Home', icon: Home, to: '/worker' },
   { label: 'Jobs', icon: Briefcase, to: '/worker/jobs' },
-  { label: 'IVR Call', icon: Phone, to: '/ivr' },
+  { label: 'Alerts', icon: Bell, to: '/worker/notifications' },
   { label: 'Earnings', icon: Wallet, to: '/worker/earnings' },
   { label: 'Reviews', icon: User, to: '/worker/reviews' },
 ];

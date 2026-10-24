@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users,
@@ -10,28 +10,52 @@ import {
   CheckCircle,
   Clock,
   ArrowUpRight,
+  Loader2,
 } from 'lucide-react';
-import { ADMIN_STATS, BOOKINGS, WORKERS } from '../../data/mockData';
+import { api } from '../../services/api';
 import Navbar from '../../components/Navbar';
 import BottomNav from '../../components/BottomNav';
 
 export default function AdminDashboard() {
-  const statCards = [
-    { label: 'Registered Workers', value: ADMIN_STATS.totalWorkers, icon: Users, color: 'text-teal-600', bg: 'bg-teal-50' },
-    { label: 'Active Today', value: ADMIN_STATS.activeWorkers, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Aadhaar Pending', value: ADMIN_STATS.pendingVerification, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Total Customers', value: ADMIN_STATS.totalCustomers.toLocaleString(), icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Bookings Today', value: ADMIN_STATS.bookingsToday, icon: Briefcase, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Open Disputes', value: ADMIN_STATS.openDisputes, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
-  ];
+  const [stats, setStats] = useState(null);
+  const [activity, setActivity] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const recentEvents = [
-    { id: 1, text: 'Ramesh Kumar (Electrician) completed order #b1 in Gurugram', time: '10 mins ago', type: 'success' },
-    { id: 2, text: 'Aadhaar document submitted by Santosh Yadav (Painter)', time: '25 mins ago', type: 'info' },
-    { id: 3, text: 'Dispute raised by Sunita Rao on AC Repair billing #b5', time: '45 mins ago', type: 'warning' },
-    { id: 4, text: 'Geeta Devi (Maid) accepted new monthly booking in Bengaluru', time: '1 hour ago', type: 'success' },
-    { id: 5, text: 'IVR session completed by basic-phone partner in Delhi', time: '2 hours ago', type: 'info' },
-  ];
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      try {
+        setLoading(true);
+        const [statsData, activityData] = await Promise.all([
+          api.getAdminStats(),
+          api.getAdminActivity()
+        ]);
+        setStats(statsData);
+        setActivity(activityData || []);
+      } catch (error) {
+        console.error('Failed to fetch admin data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAdminData();
+  }, []);
+
+  const statCards = stats ? [
+    { label: 'Registered Workers', value: stats.totalWorkers || 0, icon: Users, color: 'text-teal-600', bg: 'bg-teal-50' },
+    { label: 'Active Today', value: stats.activeWorkers || 0, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Aadhaar Pending', value: stats.pendingVerification || 0, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Total Customers', value: (stats.totalCustomers || 0).toLocaleString(), icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Bookings Today', value: stats.bookingsToday || 0, icon: Briefcase, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Open Disputes', value: stats.openDisputes || 0, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
+  ] : [];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col pb-24 md:pb-8">
@@ -133,12 +157,20 @@ export default function AdminDashboard() {
           </div>
 
           <div className="space-y-3">
-            {recentEvents.map((ev) => (
-              <div key={ev.id} className="flex items-start justify-between text-xs py-1.5 border-b border-slate-50 last:border-0">
-                <span className="text-slate-700 font-medium">{ev.text}</span>
-                <span className="text-slate-400 whitespace-nowrap ml-4">{ev.time}</span>
+            {activity.length === 0 ? (
+              <div className="text-center text-slate-400 text-xs py-4">
+                No recent activity
               </div>
-            ))}
+            ) : (
+              activity.map((ev) => (
+                <div key={ev._id || ev.id} className="flex items-start justify-between text-xs py-1.5 border-b border-slate-50 last:border-0">
+                  <span className="text-slate-700 font-medium">{ev.description || ev.text || 'Activity'}</span>
+                  <span className="text-slate-400 whitespace-nowrap ml-4">
+                    {ev.createdAt ? new Date(ev.createdAt).toLocaleString() : ev.time || 'Just now'}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </main>

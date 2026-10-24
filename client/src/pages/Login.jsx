@@ -4,6 +4,7 @@ import { User, Briefcase, Shield, ChevronDown, ChevronUp, Loader2, ArrowRight, S
 import toast from 'react-hot-toast';
 import { useAuth, DEMO_ACCOUNTS } from '../context/AuthContext';
 import OTPInput from '../components/OTPInput';
+import { SERVICES } from '../data/mockData';
 
 const ROLES = [
   {
@@ -29,13 +30,29 @@ const ROLES = [
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, demoLogin } = useAuth();
+  const { login, demoLogin, register } = useAuth();
 
   const preselect = location.state?.role || 'customer';
 
+  const [isRegister, setIsRegister] = useState(false);
   const [role, setRole] = useState(preselect);
   const [phone, setPhone] = useState('9811234567');
   const [pin, setPin] = useState('1234');
+  const [name, setName] = useState('');
+  const [city, setCity] = useState('');
+  const [pincode, setPincode] = useState('');
+  
+  // Worker registration fields
+  const [skills, setSkills] = useState('');
+  const [serviceId, setServiceId] = useState('');
+  const [hourlyRate, setHourlyRate] = useState('');
+  const [fixedRate, setFixedRate] = useState('');
+  const [experience, setExperience] = useState('');
+  const [bio, setBio] = useState('');
+  const [languages, setLanguages] = useState('');
+  const [workingHours, setWorkingHours] = useState('');
+  const [workerLocation, setWorkerLocation] = useState('');
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showDemo, setShowDemo] = useState(true);
@@ -79,6 +96,88 @@ export default function Login() {
     }
   };
 
+  const handleRegister = async (e) => {
+    if (e) e.preventDefault();
+    setError('');
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      setError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    if (!pin || pin.length !== 4) {
+      setError('Please enter your 4-digit PIN.');
+      return;
+    }
+
+    if (!name || name.trim().length < 2) {
+      setError('Please enter your full name.');
+      return;
+    }
+
+    // Customer-specific validation
+    if (role === 'customer') {
+      if (!city || city.trim().length < 2) {
+        setError('Please enter your city.');
+        return;
+      }
+    }
+
+    // Worker-specific validation
+    if (role === 'worker') {
+      if (!skills || skills.trim().length < 2) {
+        setError('Please enter your skills.');
+        return;
+      }
+      if (!serviceId) {
+        setError('Please select a service category.');
+        return;
+      }
+      if (!workerLocation || workerLocation.trim().length < 2) {
+        setError('Please enter your location.');
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      const userData = {
+        phone: cleanPhone,
+        pin,
+        role,
+        name,
+        city,
+        pincode,
+      };
+
+      // Add worker-specific fields
+      if (role === 'worker') {
+        userData.skills = skills.split(',').map(s => s.trim());
+        userData.serviceId = serviceId;
+        userData.hourlyRate = hourlyRate ? Number(hourlyRate) : null;
+        userData.fixedRate = fixedRate ? Number(fixedRate) : null;
+        userData.experience = experience;
+        userData.bio = bio;
+        userData.languages = languages.split(',').map(l => l.trim());
+        userData.workingHours = workingHours;
+        userData.location = workerLocation;
+      }
+
+      const result = await register(userData);
+      setLoading(false);
+      if (result && result.success) {
+        toast.success(`Registration successful! Welcome, ${result.user?.name || 'User'}! 🎉`);
+        navigateForRole(role);
+      } else {
+        setError(result?.error || 'Registration failed.');
+      }
+    } catch (err) {
+      setLoading(false);
+      setError('Registration failed. Please try again.');
+    }
+  };
+
   const handleInstantDemoLogin = (demo) => {
     setRole(demo.role);
     setPhone(demo.phone);
@@ -107,6 +206,32 @@ export default function Login() {
       </div>
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-5">
+        {/* Login/Register Toggle */}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => { setIsRegister(false); setError(''); }}
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+              !isRegister
+                ? 'bg-teal-600 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Login
+          </button>
+          <button
+            type="button"
+            onClick={() => { setIsRegister(true); setError(''); }}
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+              isRegister
+                ? 'bg-teal-600 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Register
+          </button>
+        </div>
+
         {/* Role Selector Tabs */}
         <div>
           <label className="label mb-2">Select Account Type</label>
@@ -118,6 +243,20 @@ export default function Login() {
                 onClick={() => {
                   setRole(r.id);
                   setError('');
+                  // Reset all fields when switching roles
+                  setName('');
+                  setCity('');
+                  setPincode('');
+                  setSkills('');
+                  setServiceId('');
+                  setHourlyRate('');
+                  setFixedRate('');
+                  setExperience('');
+                  setBio('');
+                  setLanguages('');
+                  setWorkingHours('');
+                  setWorkerLocation('');
+                  
                   // Auto-fill default demo account for role
                   const defaultAcc = DEMO_ACCOUNTS.find((a) => a.role === r.id);
                   if (defaultAcc) {
@@ -142,28 +281,194 @@ export default function Login() {
 
         {/* Phone Input */}
         <div>
-          <label className="label">Registered Mobile Number</label>
-          <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-semibold">
-              +91
-            </span>
-            <input
-              type="tel"
-              maxLength={10}
-              value={phone}
-              onChange={(e) => {
-                setPhone(e.target.value.replace(/\D/g, ''));
-                setError('');
-              }}
-              placeholder="98XXXXXXXX"
-              className="input-field pl-13 text-sm font-medium"
-            />
-          </div>
+          <label className="label">Mobile Number</label>
+          <input
+            type="tel"
+            maxLength={10}
+            value={phone}
+            onChange={(e) => {
+              setPhone(e.target.value.replace(/\D/g, ''));
+              setError('');
+            }}
+            placeholder="Enter 10-digit mobile number"
+            className="input-field text-sm font-medium"
+          />
         </div>
+
+        {/* Registration Fields */}
+        {isRegister && (
+          <>
+            {/* Name Input */}
+            <div>
+              <label className="label">Full Name *</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setError('');
+                }}
+                placeholder="Enter your full name"
+                className="input-field text-sm font-medium"
+              />
+            </div>
+
+            {/* City Input (Customer only) */}
+            {role === 'customer' && (
+              <div>
+                <label className="label">City *</label>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => {
+                    setCity(e.target.value);
+                    setError('');
+                  }}
+                  placeholder="Enter your city"
+                  className="input-field text-sm font-medium"
+                />
+              </div>
+            )}
+
+            {/* PIN Code Input (Customer only) */}
+            {role === 'customer' && (
+              <div>
+                <label className="label">PIN Code (Optional)</label>
+                <input
+                  type="tel"
+                  maxLength={6}
+                  value={pincode}
+                  onChange={(e) => {
+                    setPincode(e.target.value.replace(/\D/g, ''));
+                    setError('');
+                  }}
+                  placeholder="Enter your PIN code"
+                  className="input-field text-sm font-medium"
+                />
+              </div>
+            )}
+
+            {/* Worker Registration Fields */}
+            {role === 'worker' && (
+              <>
+                <div>
+                  <label className="label">Skills *</label>
+                  <input
+                    type="text"
+                    value={skills}
+                    onChange={(e) => {
+                      setSkills(e.target.value);
+                      setError('');
+                    }}
+                    placeholder="e.g., Wiring, Fan Installation (comma separated)"
+                    className="input-field text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">Service Category *</label>
+                  <select
+                    value={serviceId}
+                    onChange={(e) => {
+                      setServiceId(e.target.value);
+                      setError('');
+                    }}
+                    className="input-field text-sm font-medium"
+                  >
+                    <option value="">Select a service</option>
+                    {SERVICES.map(s => (
+                      <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="label">Hourly Rate (₹)</label>
+                  <input
+                    type="number"
+                    value={hourlyRate}
+                    onChange={(e) => setHourlyRate(e.target.value)}
+                    placeholder="e.g., 350"
+                    className="input-field text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">Fixed Rate (₹)</label>
+                  <input
+                    type="number"
+                    value={fixedRate}
+                    onChange={(e) => setFixedRate(e.target.value)}
+                    placeholder="e.g., 500 (if not hourly)"
+                    className="input-field text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">Experience</label>
+                  <input
+                    type="text"
+                    value={experience}
+                    onChange={(e) => setExperience(e.target.value)}
+                    placeholder="e.g., 5 years"
+                    className="input-field text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">Bio</label>
+                  <textarea
+                    rows={2}
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Describe your expertise..."
+                    className="input-field text-sm font-medium resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">Languages (comma separated)</label>
+                  <input
+                    type="text"
+                    value={languages}
+                    onChange={(e) => setLanguages(e.target.value)}
+                    placeholder="e.g., Hindi, English"
+                    className="input-field text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">Working Hours</label>
+                  <input
+                    type="text"
+                    value={workingHours}
+                    onChange={(e) => setWorkingHours(e.target.value)}
+                    placeholder="e.g., 9 AM - 6 PM"
+                    className="input-field text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">Location *</label>
+                  <input
+                    type="text"
+                    value={workerLocation}
+                    onChange={(e) => {
+                      setWorkerLocation(e.target.value);
+                      setError('');
+                    }}
+                    placeholder="e.g., Karol Bagh, New Delhi"
+                    className="input-field text-sm font-medium"
+                  />
+                </div>
+              </>
+            )}
+          </>
+        )}
 
         {/* PIN Input */}
         <div>
-          <label className="label">4-Digit Security PIN</label>
+          <label className="label">4-Digit Security PIN *</label>
           <OTPInput
             length={4}
             value={pin}
@@ -181,20 +486,20 @@ export default function Login() {
           </div>
         )}
 
-        {/* Login Button */}
+        {/* Login/Register Button */}
         <button
           type="button"
-          onClick={handleLogin}
+          onClick={isRegister ? handleRegister : handleLogin}
           disabled={loading}
           className="w-full btn-primary py-3.5 text-sm flex items-center justify-center gap-2 shadow"
         >
           {loading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" /> Logging in…
+              <Loader2 className="w-4 h-4 animate-spin" /> {isRegister ? 'Registering…' : 'Logging in…'}
             </>
           ) : (
             <>
-              Sign In as {role.charAt(0).toUpperCase() + role.slice(1)}
+              {isRegister ? 'Register' : 'Sign In'} as {role.charAt(0).toUpperCase() + role.slice(1)}
               <ArrowRight className="w-4 h-4" />
             </>
           )}
