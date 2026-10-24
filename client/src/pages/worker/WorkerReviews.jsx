@@ -15,6 +15,13 @@ export default function WorkerReviews() {
   useEffect(() => {
     const fetchWorkerData = async () => {
       if (!user?._id) return;
+      const token = localStorage.getItem('sevasaathi_token');
+      if (!token) {
+        setWorker(user);
+        setReviews([]);
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         const [workerData, reviewsData] = await Promise.all([
@@ -25,6 +32,8 @@ export default function WorkerReviews() {
         setReviews(reviewsData || []);
       } catch (error) {
         console.error('Failed to fetch worker data:', error);
+        setWorker(user);
+        setReviews([]);
       } finally {
         setLoading(false);
       }

@@ -17,6 +17,13 @@ export default function Earnings() {
   useEffect(() => {
     const fetchWalletData = async () => {
       if (!user?._id) return;
+      const token = localStorage.getItem('sevasaathi_token');
+      if (!token) {
+        setBalance(0);
+        setTransactions([]);
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         const [balanceData, transactionsData] = await Promise.all([
@@ -27,6 +34,8 @@ export default function Earnings() {
         setTransactions(transactionsData || []);
       } catch (error) {
         console.error('Failed to fetch wallet data:', error);
+        setBalance(0);
+        setTransactions([]);
       } finally {
         setLoading(false);
       }

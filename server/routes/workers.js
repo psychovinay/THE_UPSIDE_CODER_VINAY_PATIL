@@ -40,6 +40,10 @@ router.get('/', async (req, res) => {
 // Get worker by ID
 router.get('/:id', async (req, res) => {
   try {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ error: 'Worker not found' });
+    }
     const worker = await Worker.findById(req.params.id)
       .populate('serviceId')
       .select('-pin');
@@ -92,6 +96,10 @@ router.patch('/:id/availability', auth, authorize('worker'), async (req, res) =>
 // Get worker's bookings
 router.get('/:id/bookings', auth, authorize('worker'), async (req, res) => {
   try {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ error: 'Worker not found' });
+    }
     if (req.user._id.toString() !== req.params.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
