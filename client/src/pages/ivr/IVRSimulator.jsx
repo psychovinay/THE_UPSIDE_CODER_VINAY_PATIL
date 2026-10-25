@@ -251,7 +251,7 @@ export default function IVRSimulator() {
             Toll-Free Calling Interface
           </h1>
           <p className="text-xs text-slate-400">
-            For workers who don't use smartphones — dial <span className="text-teal-400 font-bold font-mono">1800-SEVA-SA</span> to manage availability & accept orders.
+            For workers who don't use smartphones — dial <span className="text-teal-400 font-bold font-mono">09513886363</span> (PIN: 8433-9558-46) to manage availability & accept orders.
           </p>
         </div>
 
@@ -315,7 +315,7 @@ export default function IVRSimulator() {
                   SevaSaathi Toll-Free
                 </h2>
                 <p className="text-xs text-teal-400 font-mono tracking-widest mt-0.5">
-                  1800-7382-72
+                  09513886363
                 </p>
                 <div className="mt-1">
                   {callState === 'idle' && (
@@ -475,8 +475,8 @@ export default function IVRSimulator() {
             <div className="bg-emerald-950/90 border-2 border-emerald-600/70 rounded-2xl p-3.5 font-mono text-emerald-400 h-56 flex flex-col justify-between overflow-y-auto shadow-inner text-xs">
               <div className="flex justify-between items-center text-[10px] text-emerald-500/80 border-b border-emerald-800 pb-1">
                 <span>📶 2G GSM</span>
-                <span>1800-SEVA</span>
-                <span>{callState === 'in_call' ? formatTimer(callDuration) : 'IDLE'}</span>
+                <span>09513886363</span>
+                <span>PIN: 8433-9558-46</span>
               </div>
 
               <div className="flex-1 overflow-y-auto space-y-2 py-2 pr-1 text-[11px] leading-relaxed">

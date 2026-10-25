@@ -11,28 +11,34 @@ router.get('/', async (req, res) => {
     const { serviceId, pincode, radius, available } = req.query;
     const filter = {};
 
+    // Only filter by available if explicitly requested
     if (available !== undefined) filter.available = available === 'true';
 
     let workers = await Worker.find(filter)
       .populate('serviceId')
       .select('-pin');
 
-    // Filter by serviceId (match by ObjectId or virtual id)
-    if (serviceId) {
+    // Filter by serviceId (match by service id field which is numeric)
+    // If no serviceId provided, return all workers (for "All" category)
+    if (serviceId && serviceId !== 'null' && serviceId !== '') {
       workers = workers.filter(w => {
         if (!w.serviceId) return false;
-        const sid = w.serviceId._id ? w.serviceId._id.toString() : w.serviceId.toString();
-        return sid === serviceId.toString() || (w.serviceId.id && w.serviceId.id.toString() === serviceId.toString());
+        // Match by the numeric id field from Service model
+        return w.serviceId.id == serviceId;
       });
     }
 
     // Filter by pincode/radius (simplified - in production use geospatial queries)
-    if (pincode) {
-      workers = workers.filter(w => w.pincode === pincode);
+    // For demo, if pincode is provided, don't filter strictly to show more workers
+    if (pincode && pincode.length > 0) {
+      // Optional: strict filter
+      // workers = workers.filter(w => w.pincode === pincode);
+      // For demo: show all workers regardless of pincode
     }
 
     res.json(workers);
   } catch (error) {
+    console.error('Workers API error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

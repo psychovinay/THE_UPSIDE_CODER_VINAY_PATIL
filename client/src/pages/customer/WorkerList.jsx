@@ -48,7 +48,7 @@ export default function WorkerList() {
     const fetchWorkers = async () => {
       try {
         setLoading(true);
-        const params = { serviceId, pincode, available: 'true' };
+        const params = { serviceId, pincode };
         const data = await api.getWorkers(params);
         setWorkers(data || []);
       } catch (error) {
