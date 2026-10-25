@@ -47,18 +47,23 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const mongoose = require('mongoose');
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    const id = req.params.id;
+
+    // Try to find by ObjectId first, then by string id if needed
+    let worker;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      worker = await Worker.findById(id).populate('serviceId').select('-pin');
+    } else {
+      // If not a valid ObjectId, try finding by other fields or return error
       return res.status(404).json({ error: 'Worker not found' });
     }
-    const worker = await Worker.findById(req.params.id)
-      .populate('serviceId')
-      .select('-pin');
-    
+
     if (!worker) {
       return res.status(404).json({ error: 'Worker not found' });
     }
     res.json(worker);
   } catch (error) {
+    console.error('Get worker error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

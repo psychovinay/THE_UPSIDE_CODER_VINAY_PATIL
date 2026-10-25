@@ -161,7 +161,7 @@ export default function WorkerList() {
                 key={worker._id || worker.id}
                 worker={worker}
                 showDistance
-                onClick={() => navigate(`/customer/workers/${worker._id || worker.id}`)}
+                onClick={() => navigate(`/customer/profile/${worker._id || worker.id}`)}
               />
             ))
           )}
