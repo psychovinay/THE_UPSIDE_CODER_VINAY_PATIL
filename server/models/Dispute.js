@@ -27,4 +27,6 @@ disputeSchema.pre('save', function(next) {
   next();
 });
 
-module.exports = mongoose.model('Dispute', disputeSchema);
+const Dispute = mongoose.model('Dispute', disputeSchema);
+Dispute.Dispute = Dispute;
+module.exports = Dispute;

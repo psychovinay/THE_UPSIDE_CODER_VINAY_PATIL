@@ -47,7 +47,16 @@ export default function AdminDashboard() {
   useEffect(() => {
 
     const fetchAdminData = async () => {
-
+      const token = localStorage.getItem('sevasaathi_token');
+      if (!token) {
+        setStats({
+          totalWorkers: 0, activeWorkers: 0, pendingVerification: 0,
+          totalCustomers: 0, bookingsToday: 0, openDisputes: 0, avgRating: 0
+        });
+        setActivity([]);
+        setLoading(false);
+        return;
+      }
       try {
 
         setLoading(true);
@@ -67,7 +76,11 @@ export default function AdminDashboard() {
       } catch (error) {
 
         console.error('Failed to fetch admin data:', error);
-
+        setStats({
+          totalWorkers: 0, activeWorkers: 0, pendingVerification: 0,
+          totalCustomers: 0, bookingsToday: 0, openDisputes: 0, avgRating: 0
+        });
+        setActivity([]);
       } finally {
 
         setLoading(false);

@@ -33,6 +33,17 @@ export default function WorkerDashboard() {
   useEffect(() => {
     const fetchWorkerData = async () => {
       if (!user?._id) return;
+
+      // Offline demo mode: no real JWT token → skip API calls, use stored user data
+      const token = localStorage.getItem('sevasaathi_token');
+      if (!token) {
+        setWorker(user);
+        setIsAvailable(user?.available ?? true);
+        setBookings([]);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         const [workerData, bookingsData] = await Promise.all([
@@ -40,10 +51,14 @@ export default function WorkerDashboard() {
           api.getWorkerBookings(user._id)
         ]);
         setWorker(workerData);
-        setIsAvailable(workerData?.available || true);
+        setIsAvailable(workerData?.available ?? true);
         setBookings(bookingsData || []);
       } catch (error) {
         console.error('Failed to fetch worker data:', error);
+        // Graceful fallback to user context data
+        setWorker(user);
+        setIsAvailable(user?.available ?? true);
+        setBookings([]);
       } finally {
         setLoading(false);
       }

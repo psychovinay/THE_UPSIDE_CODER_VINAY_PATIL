@@ -56,7 +56,7 @@ const Worker = User.discriminator('worker', new mongoose.Schema({
   location: String,
   rating: { type: Number, default: 0 },
   reviewCount: { type: Number, default: 0 },
-  referralCode: { type: String, unique: true },
+  referralCode: { type: String, unique: true, sparse: true },
   walletBalance: { type: Number, default: 0 },
   // Worker-first matching settings
   serviceRadius: { type: Number, default: 5 }, // in km

@@ -85,9 +85,9 @@ export default function PostJob() {
 
     try {
       setCalculatingPrice(true);
-      const service = services.find(s => s._id === formData.serviceId);
+      const service = services.find(s => s._id === formData.serviceId || s.id === formData.serviceId);
       const result = await api.calculateFairPrice(
-        service?.id || 'electrician',
+        service?.name || service?.id || 'electrician',
         formData.location.city,
         formData.urgency,
         formData.description

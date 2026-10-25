@@ -17,9 +17,13 @@ router.get('/', async (req, res) => {
       .populate('serviceId')
       .select('-pin');
 
-    // Filter by serviceId (match by service _id)
+    // Filter by serviceId (match by ObjectId or virtual id)
     if (serviceId) {
-      workers = workers.filter(w => w.serviceId && w.serviceId._id.toString() === serviceId);
+      workers = workers.filter(w => {
+        if (!w.serviceId) return false;
+        const sid = w.serviceId._id ? w.serviceId._id.toString() : w.serviceId.toString();
+        return sid === serviceId.toString() || (w.serviceId.id && w.serviceId.id.toString() === serviceId.toString());
+      });
     }
 
     // Filter by pincode/radius (simplified - in production use geospatial queries)
@@ -36,6 +40,10 @@ router.get('/', async (req, res) => {
 // Get worker by ID
 router.get('/:id', async (req, res) => {
   try {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ error: 'Worker not found' });
+    }
     const worker = await Worker.findById(req.params.id)
       .populate('serviceId')
       .select('-pin');
@@ -88,6 +96,10 @@ router.patch('/:id/availability', auth, authorize('worker'), async (req, res) =>
 // Get worker's bookings
 router.get('/:id/bookings', auth, authorize('worker'), async (req, res) => {
   try {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ error: 'Worker not found' });
+    }
     if (req.user._id.toString() !== req.params.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }

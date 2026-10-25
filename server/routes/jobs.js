@@ -80,6 +80,26 @@ router.post('/', auth, async (req, res) => {
 });
 
 /**
+ * POST /api/jobs/fair-price
+ * Calculate fair price range for a service
+ */
+router.post('/fair-price', async (req, res) => {
+  try {
+    const { serviceType, city, urgency, description } = req.body;
+    const fairPrice = await calculateFairPrice({
+      serviceType,
+      city,
+      urgency: urgency || 'normal',
+      description
+    });
+    res.json(fairPrice);
+  } catch (error) {
+    console.error('Error calculating fair price:', error);
+    res.status(500).json({ error: 'Failed to calculate fair price' });
+  }
+});
+
+/**
  * GET /api/jobs/:id
  * Get job details
  */
@@ -281,7 +301,7 @@ router.post('/:id/accept-offer', auth, async (req, res) => {
 });
 
 /**
- * GET /api/jobs/:id/kaamscore
+ * GET /api/jobs/:workerId/kaamscore
  * Get KaamScore for a worker
  */
 router.get('/:workerId/kaamscore', async (req, res) => {

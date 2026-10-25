@@ -45,7 +45,8 @@ async function calculateFairPrice(params) {
   const { serviceType, city, urgency = 'normal', description } = params;
   
   // Get base price for service
-  const basePrice = SERVICE_BASE_PRICES[serviceType] || SERVICE_BASE_PRICES['electrician'];
+  const serviceKey = (serviceType || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const basePrice = SERVICE_BASE_PRICES[serviceKey] || SERVICE_BASE_PRICES[serviceType] || SERVICE_BASE_PRICES['electrician'];
   
   // Get city multiplier
   const cityLower = city?.toLowerCase() || 'default';

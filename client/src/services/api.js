@@ -25,13 +25,14 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Request failed');
+        const errorMsg = data.error || (data.errors && data.errors[0] ? data.errors[0].msg : null) || 'Request failed';
+        throw new Error(errorMsg);
       }
 
       return data;
     } catch (error) {
       console.error('API Error:', error);
-      if (error.message.includes('API endpoint not found')) {
+      if (error.message && !error.message.includes('Failed to fetch') && !error.message.includes('NetworkError')) {
         throw error;
       }
       throw new Error('Failed to connect to server. Please try again.');

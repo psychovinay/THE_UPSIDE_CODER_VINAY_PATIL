@@ -27,4 +27,6 @@ const negotiationSchema = new mongoose.Schema({
 negotiationSchema.index({ jobId: 1, workerId: 1 });
 negotiationSchema.index({ workerId: 1, status: 1 });
 
-module.exports = mongoose.model('Negotiation', negotiationSchema);
+const Negotiation = mongoose.model('Negotiation', negotiationSchema);
+Negotiation.Negotiation = Negotiation;
+module.exports = Negotiation;

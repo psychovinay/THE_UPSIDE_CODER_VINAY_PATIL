@@ -55,4 +55,6 @@ jobSchema.index({ customerId: 1, status: 1 });
 jobSchema.index({ 'location.city': 1, status: 1 });
 jobSchema.index({ serviceId: 1, status: 1 });
 
-module.exports = mongoose.model('Job', jobSchema);
+const Job = mongoose.model('Job', jobSchema);
+Job.Job = Job;
+module.exports = Job;
